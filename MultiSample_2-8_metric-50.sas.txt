@@ -1,0 +1,957 @@
+
+options Linesize=200 nonotes nonumber nodate nospool erase nosource nosource2  errors=0;
+
+Libname MeanStru 'G:\Dissertation\SAS\MeanStructureData';
+
+filename newlog 'G:\Dissertation\SAS\MeanStructureData\logfile_2_8_metric50.tmp';
+filename newout 'G:\Dissertation\SAS\MeanStructureData\outfile_2_8_metric50.tmp';
+
+proc printto log=newlog print=newout new;
+
+%macro multivariat(REPS, n1, n2, 
+                   FCOV1,  laterr1, laterr2,  
+                   Lambd11,Lambd12,Lambd13,Lambd14,Lambd15,Lambd16,Lambd17,Lambd18,
+                   Error11,Error12,Error13,Error14,Error15,Error16,Error17,Error18,       
+
+                   FCOV2,  laterr3, laterr4,  
+                   Lambd21,Lambd22,Lambd23,Lambd24,Lambd25,Lambd26,Lambd27,Lambd28,
+                   Error21,Error22,Error23,Error24,Error25,Error26,Error27,Error28,       
+
+                   kappa1, kappa2, tau11, tau12, tau13, tau14, tau15, tau16, tau17, tau18,
+                   kappa3, kappa4, tau21, tau22, tau23, tau24, tau25, tau26, tau27, tau28, Scenario);
+%do J= 1 %to &REPS;
+
+/******************************************************************************************************/
+/* 
+/* This section generates the data for GROUP 1 (2-factor model, 8 items)
+/*
+/******************************************************************************************************/
+
+data d1&J;
+%Do cases1=1 %to &n1;
+cov_1_12=rannor(-1)*sqrt(&FCOV1);
+
+Factor1 = &kappa1 + rannor(-1)*sqrt(&laterr1) + cov_1_12;
+Factor2 = &kappa2 + rannor(-1)*sqrt(&laterr2) + cov_1_12;
+
+v1 = &tau11 + rannor(-1)*sqrt(&Error11) + Factor1*sqrt(&Lambd11);
+v2 = &tau12 + rannor(-1)*sqrt(&Error12) + Factor1*sqrt(&Lambd12);
+v3 = &tau13 + rannor(-1)*sqrt(&Error13) + Factor1*sqrt(&Lambd13);
+v4 = &tau14 + rannor(-1)*sqrt(&Error14) + Factor1*sqrt(&Lambd14);
+v5 = &tau15 + rannor(-1)*sqrt(&Error15) + Factor2*sqrt(&Lambd15);
+v6 = &tau16 + rannor(-1)*sqrt(&Error16) + Factor2*sqrt(&Lambd16);
+v7 = &tau17 + rannor(-1)*sqrt(&Error17) + Factor2*sqrt(&Lambd17);
+v8 = &tau18 + rannor(-1)*sqrt(&Error18) + Factor2*sqrt(&Lambd18);
+
+output;
+%end;
+
+data d1&J;set d1&J;
+drop Factor1 Factor2 cov_1_12;
+
+/******************************************************************************************************/
+/* 
+/* This section generates the data for GROUP 2 (2-factor model, 8 items)
+/*
+/******************************************************************************************************/
+
+data d2&J;
+%Do cases2=1 %to &n2;
+cov_2_12=rannor(-1)*sqrt(&FCOV2);
+
+Factor3 = &kappa3 + rannor(-1)*sqrt(&laterr3) + cov_2_12;
+Factor4 = &kappa4 + rannor(-1)*sqrt(&laterr4) + cov_2_12;
+
+v1 = &tau21 + rannor(-1)*sqrt(&Error21) + Factor3*sqrt(&Lambd21);
+v2 = &tau22 + rannor(-1)*sqrt(&Error22) + Factor3*sqrt(&Lambd22);
+v3 = &tau23 + rannor(-1)*sqrt(&Error23) + Factor3*sqrt(&Lambd23);
+v4 = &tau24 + rannor(-1)*sqrt(&Error24) + Factor3*sqrt(&Lambd24);
+v5 = &tau25 + rannor(-1)*sqrt(&Error25) + Factor4*sqrt(&Lambd25);
+v6 = &tau26 + rannor(-1)*sqrt(&Error26) + Factor4*sqrt(&Lambd26);
+v7 = &tau27 + rannor(-1)*sqrt(&Error27) + Factor4*sqrt(&Lambd27);
+v8 = &tau28 + rannor(-1)*sqrt(&Error28) + Factor4*sqrt(&Lambd28);
+
+output;
+%end;
+
+data d2&J;set d2&J;
+drop Factor3 Factor4 cov_2_12;
+
+/******* UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED *********/
+/******* UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED *********/
+/******* UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED *********/
+/******* UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED *********/
+/******* UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED *********/
+/******* UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED *********/
+/******* UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED UNCONSTRAINED *********/
+
+/******************************************************************************************************/
+/* 
+/* This section fits the MEAN STRUCTURE model to the data generated according to specified parameters
+/* Unconstrained model 2: 25% lambdas were set as unconstrained
+/*
+/******************************************************************************************************/
+
+data MS&J;
+
+proc calis meanstr maxit=100000 maxfunc=100000 OMETHOD=NEWRAP OutRam=_Parameters_ OUTFIT=_FitIndices_ noprint;
+   var v1-v8;       
+   group 1 / data=d1&J; *Data generated for GROUP 1 accessed by PROC CALIS HERE;
+   group 2 / data=d2&J; *Data generated for GROUP 2 accessed by PROC CALIS HERE;
+
+model 1 / group=1 ;
+lineqs
+v1=tau1 * Intercept + Lambda1 f1 + e1,
+v2=tau2 * Intercept + Lambda2 f1 + e2,
+v3=tau3 * Intercept + Lambda3 f1 + e3, 
+v4=tau4 * Intercept + Lambda4 f1 + e4, 
+v5=tau5 * Intercept + Lambda5 f2 + e5, 
+v6=tau6 * Intercept + Lambda6 f2 + e6, 
+v7=tau7 * Intercept + Lambda7 f2 + e7, 
+v8=tau8 * Intercept + Lambda8 f2 + e8;
+std f1=Fvar1, f2=Fvar2, e1-e8=thetadelta1-thetadelta8; 
+cov f1 f2=phi21;
+
+mean f1 f2 = Kappa1 Kappa2;
+
+model 2 / group=2 ;
+lineqs
+v1=tau1 * Intercept + Lambda1 f1 + e1,
+v2=tau2 * Intercept + Lambda2 f1 + e2,
+v3=tau3 * Intercept + Lambda93 f1 + e3, 
+v4=tau4 * Intercept + Lambda94 f1 + e4, 
+v5=tau5 * Intercept + Lambda95 f2 + e5, 
+v6=tau6 * Intercept + Lambda96 f2 + e6, 
+v7=tau7 * Intercept + Lambda7 f2 + e7, 
+v8=tau8 * Intercept + Lambda8 f2 + e8; 
+std f1=Fvar1, f2=Fvar2, e1-e2=thetadelta1-thetadelta2,
+e3-e6=thetadeltaU3-thetadeltaU6,e7-e8=thetadelta7-thetadelta8; 
+cov f1 f2=phi21;
+
+mean f1 f2 = 0 0;
+
+*pathdiagram EXOGCOV DIAGRAM=all;
+
+Data _Parameters_;set _Parameters_; *proc print;
+
+/*****************************************************************************/
+/* 
+/* This section isolates the Tau parameters and standard errors of interest
+/*
+/*****************************************************************************/
+
+Data _Taus_;set _Parameters_; title 'Unconstrained Parameters';
+
+Data _Taus_;set _Taus_; keep _ESTIM_   _STDERR_;
+Data _Taus_;set _Taus_;
+      If _N_=20 or _N_=23 or _N_=26 or _N_=29 or _N_=32 or _N_=35 or 
+         _N_=38 or _N_=41 or 
+         _N_=76 or _N_=79 or _N_=82 or _N_=85 or _N_=88 or _N_=91 or
+         _N_=94 or _N_=97; 
+*proc print;
+Data _Taus_;set _Taus_; Proc Transpose out=_Taus_;
+Data _Taus1_;set _Taus_;if _n_=1;
+D1_Tau1=COL1;
+D1_Tau2=COL2; 
+D1_Tau3=COL3; 
+D1_Tau4=COL4; 
+D1_Tau5=COL5; 
+D1_Tau6=COL6; 
+D1_Tau7=COL7; 
+D1_Tau8=COL8; 
+D2_Tau1=COL9;
+D2_Tau2=COL10; 
+D2_Tau3=COL11; 
+D2_Tau4=COL12; 
+D2_Tau5=COL13; 
+D2_Tau6=COL14; 
+D2_Tau7=COL15; 
+D2_Tau8=COL16; 
+
+Data _Taus1_;set _Taus1_;drop _NAME_ _LABEL_ COL1-COL16;
+
+Data _Taus2_;set _Taus_;if _n_=2;
+SE_1Tau1=COL1;
+SE_1Tau2=COL2; 
+SE_1Tau3=COL3; 
+SE_1Tau4=COL4; 
+SE_1Tau5=COL5; 
+SE_1Tau6=COL6; 
+SE_1Tau7=COL7; 
+SE_1Tau8=COL8; 
+SE_2Tau1=COL9;
+SE_2Tau2=COL10; 
+SE_2Tau3=COL11; 
+SE_2Tau4=COL12; 
+SE_2Tau5=COL13; 
+SE_2Tau6=COL14; 
+SE_2Tau7=COL15; 
+SE_2Tau8=COL16; 
+
+Data _Taus2_;set _Taus2_;drop _NAME_ _LABEL_ COL1-COL16;
+
+/*****************************************************************************/
+/* 
+/* This section isolates the Lambda parameters and standard errors of interest
+/*
+/*****************************************************************************/
+
+Data _StdLambdas_;set _Parameters_; keep _ESTIM_ _STDERR_ _SDEST_ _SDSE_;
+Data _StdLambdas_;set _StdLambdas_;
+      If _N_=21 or _N_=24 or _N_=27 or _N_=30 or _N_=33 or _N_=36 or _N_=39 or
+         _N_=42 or
+         _N_=77 or _N_=80 or _N_=83 or _N_=86 or _N_=89 or _N_=92 or
+         _N_=95 or _N_=98; 
+*proc print;
+Data _StdLambdas_;set _StdLambdas_; Proc Transpose out=_StdLambdas_;
+Data _StdLambdas1_;set _StdLambdas_;if _n_=1;
+D1Lamb1=COL1;
+D1Lamb2=COL2; 
+D1Lamb3=COL3; 
+D1Lamb4=COL4; 
+D1Lamb5=COL5; 
+D1Lamb6=COL6; 
+D1Lamb7=COL7; 
+D1Lamb8=COL8; 
+D2Lamb1=COL9;
+D2Lamb2=COL10;  
+D2Lamb3=COL11;  
+D2Lamb4=COL12;  
+D2Lamb5=COL13;  
+D2Lamb6=COL14;  
+D2Lamb7=COL15;  
+D2Lamb8=COL16;  
+Data _StdLambdas1_;set _StdLambdas1_;drop _NAME_ _LABEL_ COL1-COL16;
+
+Data _StdLambdas2_;set _StdLambdas_;if _n_=2;
+SE_D1L1=COL1;
+SE_D1L2=COL2; 
+SE_D1L3=COL3; 
+SE_D1L4=COL4; 
+SE_D1L5=COL5; 
+SE_D1L6=COL6; 
+SE_D1L7=COL7; 
+SE_D1L8=COL8; 
+SE_D2L1=COL9;
+SE_D2L2=COL10;  
+SE_D2L3=COL11;  
+SE_D2L4=COL12;  
+SE_D2L5=COL13;  
+SE_D2L6=COL14;  
+SE_D2L7=COL15;  
+SE_D2L8=COL16;  
+Data _StdLambdas2_;set _StdLambdas2_;drop _NAME_ _LABEL_ COL1-COL16;
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the STANDARDIZED Lambda parameters and standard errors of interest
+/*
+/*******************************************************************************************/
+
+Data _StdLambdas3_;set _StdLambdas_;if _n_=3;
+D1ZLamb1=COL1;
+D1ZLamb2=COL2; 
+D1ZLamb3=COL3; 
+D1ZLamb4=COL4; 
+D1ZLamb5=COL5; 
+D1ZLamb6=COL6; 
+D1ZLamb7=COL7; 
+D1ZLamb8=COL8; 
+D2ZLamb1=COL9;
+D2ZLamb2=COL10;  
+D2ZLamb3=COL11;  
+D2ZLamb4=COL12;  
+D2ZLamb5=COL13;  
+D2ZLamb6=COL14;  
+D2ZLamb7=COL15;  
+D2ZLamb8=COL16;  
+Data _StdLambdas3_;set _StdLambdas3_;drop _NAME_ _LABEL_ COL1-COL16;
+
+Data _StdLambdas4_;set _StdLambdas_;if _n_=4;
+ZSE_D1L1=COL1;
+ZSE_D1L2=COL2; 
+ZSE_D1L3=COL3; 
+ZSE_D1L4=COL4; 
+ZSE_D1L5=COL5; 
+ZSE_D1L6=COL6; 
+ZSE_D1L7=COL7; 
+ZSE_D1L8=COL8; 
+ZSE_D2L1=COL9;
+ZSE_D2L2=COL10;  
+ZSE_D2L3=COL11;  
+ZSE_D2L4=COL12;  
+ZSE_D2L5=COL13;  
+ZSE_D2L6=COL14;  
+ZSE_D2L7=COL15;  
+ZSE_D2L8=COL16;  
+
+Data _StdLambdas4_;set _StdLambdas4_;drop _NAME_ _LABEL_ COL1-COL16;
+
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the Factor Covariances, Correlations and standard errors of interest
+/*
+/*******************************************************************************************/
+
+Data _FactCovs_;set _Parameters_; keep _ESTIM_ _STDERR_ _SDEST_ _SDSE_;
+Data _FactCovs_;set _FactCovs_;
+      If _N_=54 or _N_=110; 
+      *proc print;
+Data _FactCovs_;set _FactCovs_; Proc Transpose out=_FactCovs_;*proc print;
+Data _FactCovs1_;set _FactCovs_;if _n_=1;
+D1_FCov=COL1;
+D2_FCov=COL2; 
+Data _FactCovs1_;set _FactCovs1_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+Data _FactCovs2_;set _FactCovs_;if _n_=2;
+D1_FCovSE=COL1;
+D2_FCovSE=COL2; 
+Data _FactCovs2_;set _FactCovs2_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+Data _FactCovs3_;set _FactCovs_;if _n_=3;
+D1_FCor=COL1;
+D2_FCor=COL2; 
+Data _FactCovs3_;set _FactCovs3_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+Data _FactCovs4_;set _FactCovs_;if _n_=4;
+D1FCorSE=COL1;
+D2FCorSE=COL2; 
+Data _FactCovs4_;set _FactCovs4_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the Factor Means, Variances and standard errors of interest
+/*
+/*******************************************************************************************/
+
+Data _FactMean_;set _Parameters_; keep _ESTIM_ _STDERR_;
+Data _FactMean_;set _FactMean_;
+      If _N_=44 or _N_=45 or _N_=55 or _N_=56 or
+         _N_=100 or _N_=101; 
+         *proc print;
+Data _FactMean_;set _FactMean_; Proc Transpose out=_FactMean_;*proc print;
+Data _FactMean1_;set _FactMean_;if _n_=1;
+D1_F1Var = COL1;
+D1_F2Var = COL2;
+D1_F1Mea = COL3;
+D1_F2Mea = COL4; 
+D2_F1Var = COL5;
+D2_F2Var = COL6;
+ 
+Data _FactMean1_;set _FactMean1_;drop _NAME_ _LABEL_ COL1-COL6;
+*proc print;
+
+Data _FactMean2_;set _FactMean_;if _n_=2;
+D1_F1VSE = COL1;
+D1_F2VSE = COL2; 
+D2_F1VSE = COL3;
+D2_F2VSE = COL4; 
+
+Data _FactMean2_;set _FactMean2_;drop _NAME_ _LABEL_ COL1-COL4;
+*proc print;
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the FIT INDICES of interest
+/*
+/*******************************************************************************************/
+Data _FitIndices_;set _FitIndices_;*proc print;
+Data _FitIndices_;set _FitIndices_;
+If _N_=1 or _N_=2 or _N_=11 or _N_=12 or _N_=17 or 21<=_N_<=23 or
+        _N_=29;
+
+Data _FitIndices_;set _FitIndices_;Proc Transpose out=_FitIndices_;
+Data _FitIndices_;set _FitIndices_;If _N_=2;
+Data _FitIndices_;set _FitIndices_;
+Sampsize=COL1;
+NumVar  =COL2; 
+ChiSquar=COL3; 
+ChiSDF  =COL4; 
+SRMR    =COL5; 
+RMSEA   =COL6; 
+RMSEA_LL=COL7; 
+RMSEA_UL=COL8; 
+CFI     =COL9; 
+
+Data _FitIndices_;set _FitIndices_;drop _NAME_ _LABEL_ COL1-COL9;
+
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+/******* CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED CONSTRAINED *********/
+
+/******************************************************************************************************/
+/* 
+/* This section fits the MEAN STRUCTURE model to the data generated according to specified parameters
+/*
+/******************************************************************************************************/
+
+data MS&J;
+
+proc calis meanstr maxit=100000 maxfunc=100000 OMETHOD=NEWRAP OutRam=_CParameters_ OUTFIT=_CFitIndices_ noprint;
+   var v1-v8;       
+   group 1 / data=d1&J; *Data generated for GROUP 1 accessed by PROC CALIS HERE;
+   group 2 / data=d2&J; *Data generated for GROUP 2 accessed by PROC CALIS HERE;
+
+model 1 / group=1 ;
+lineqs
+v1=tau1 * Intercept + Lambda1 f1 + e1,
+v2=tau2 * Intercept + Lambda2 f1 + e2,
+v3=tau3 * Intercept + Lambda3 f1 + e3, 
+v4=tau4 * Intercept + Lambda4 f1 + e4, 
+v5=tau5 * Intercept + Lambda5 f2 + e5, 
+v6=tau6 * Intercept + Lambda6 f2 + e6, 
+v7=tau7 * Intercept + Lambda7 f2 + e7, 
+v8=tau8 * Intercept + Lambda8 f2 + e8;
+std f1=Fvar1, f2=Fvar2, e1-e8=thetadelta1-thetadelta8; 
+cov f1 f2=phi21;
+
+mean f1 f2 = Kappa1 Kappa2;
+
+model 2 / group=2 ;
+lineqs
+v1=tau1 * Intercept + Lambda1 f1 + e1,
+v2=tau2 * Intercept + Lambda2 f1 + e2,
+v3=tau3 * Intercept + Lambda3 f1 + e3, 
+v4=tau4 * Intercept + Lambda4 f1 + e4, 
+v5=tau5 * Intercept + Lambda5 f2 + e5, 
+v6=tau6 * Intercept + Lambda6 f2 + e6, 
+v7=tau7 * Intercept + Lambda7 f2 + e7, 
+v8=tau8 * Intercept + Lambda8 f2 + e8; 
+std f1=Fvar1, f2=Fvar2, e1-e8=thetadelta1-thetadelta8; 
+cov f1 f2=phi21;
+
+mean f1 f2 = 0 0;
+
+*pathdiagram EXOGCOV DIAGRAM=all;
+
+Data _CParameters_;set _CParameters_; *proc print;
+
+/*****************************************************************************/
+/* 
+/* This section isolates the Tau parameters and standard errors of interest[CONSTRAINED]
+/*
+/*****************************************************************************/
+
+Data _CTaus_;set _CParameters_; title 'CONSTRAINED Parameters';*proc print;
+
+Data _CTaus_;set _CTaus_; keep _ESTIM_   _STDERR_;
+Data _CTaus_;set _CTaus_;
+      If _N_=20 or _N_=23 or _N_=26 or _N_=29 or _N_=32 or _N_=35 or 
+         _N_=38 or _N_=41 or 
+         _N_=76 or _N_=79 or _N_=82 or _N_=85 or _N_=88 or _N_=91 or
+         _N_=94 or _N_=97; 
+*proc print;
+Data _CTaus_;set _CTaus_; Proc Transpose out=_CTaus_;
+Data _CTaus1_;set _CTaus_;if _n_=1;
+D1CTau1=COL1;
+D1CTau2=COL2; 
+D1CTau3=COL3; 
+D1CTau4=COL4; 
+D1CTau5=COL5; 
+D1CTau6=COL6; 
+D1CTau7=COL7; 
+D1CTau8=COL8; 
+D2CTau1=COL9;
+D2CTau2=COL10; 
+D2CTau3=COL11; 
+D2CTau4=COL12; 
+D2CTau5=COL13; 
+D2CTau6=COL14; 
+D2CTau7=COL15; 
+D2CTau8=COL16; 
+
+Data _CTaus1_;set _CTaus1_;drop _NAME_ _LABEL_ COL1-COL16;
+
+Data _CTaus2_;set _CTaus_;if _n_=2;
+SEC1Tau1=COL1;
+SEC1Tau2=COL2; 
+SEC1Tau3=COL3; 
+SEC1Tau4=COL4; 
+SEC1Tau5=COL5; 
+SEC1Tau6=COL6; 
+SEC1Tau7=COL7; 
+SEC1Tau8=COL8; 
+SEC2Tau1=COL9;
+SEC2Tau2=COL10; 
+SEC2Tau3=COL11; 
+SEC2Tau4=COL12; 
+SEC2Tau5=COL13; 
+SEC2Tau6=COL14; 
+SEC2Tau7=COL15; 
+SEC2Tau8=COL16; 
+
+Data _CTaus2_;set _CTaus2_;drop _NAME_ _LABEL_ COL1-COL16;
+
+/*****************************************************************************/
+/* 
+/* This section isolates the Lambda parameters and standard errors of interest
+/*
+/*****************************************************************************/
+
+Data _CStdLambdas_;set _CParameters_; keep _ESTIM_ _STDERR_ _SDEST_ _SDSE_;
+Data _CStdLambdas_;set _CStdLambdas_;
+      If _N_=21 or _N_=24 or _N_=27 or _N_=30 or _N_=33 or _N_=36 or _N_=39 or
+         _N_=42 or
+         _N_=77 or _N_=80 or _N_=83 or _N_=86 or _N_=89 or _N_=92 or
+         _N_=95 or _N_=98; 
+
+Data _CStdLambdas_;set _CStdLambdas_; Proc Transpose out=_CStdLambdas_;
+Data _CStdLambdas1_;set _CStdLambdas_;if _n_=1;
+D1CLamb1=COL1;
+D1CLamb2=COL2; 
+D1CLamb3=COL3; 
+D1CLamb4=COL4; 
+D1CLamb5=COL5; 
+D1CLamb6=COL6; 
+D1CLamb7=COL7; 
+D1CLamb8=COL8; 
+D2CLamb1=COL9;
+D2CLamb2=COL10;  
+D2CLamb3=COL11;  
+D2CLamb4=COL12;  
+D2CLamb5=COL13;  
+D2CLamb6=COL14;  
+D2CLamb7=COL15;  
+D2CLamb8=COL16;  
+Data _CStdLambdas1_;set _CStdLambdas1_;drop _NAME_ _LABEL_ COL1-COL16;
+
+Data _CStdLambdas2_;set _CStdLambdas_;if _n_=2;
+SECD1L1=COL1;
+SECD1L2=COL2; 
+SECD1L3=COL3; 
+SECD1L4=COL4; 
+SECD1L5=COL5; 
+SECD1L6=COL6; 
+SECD1L7=COL7; 
+SECD1L8=COL8; 
+SECD2L1=COL9;
+SECD2L2=COL10;  
+SECD2L3=COL11;  
+SECD2L4=COL12;  
+SECD2L5=COL13;  
+SECD2L6=COL14;  
+SECD2L7=COL15;  
+SECD2L8=COL16;  
+Data _CStdLambdas2_;set _CStdLambdas2_;drop _NAME_ _LABEL_ COL1-COL16;
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the STANDARDIZED Lambda parameters and standard errors of interest
+/*
+/*******************************************************************************************/
+
+Data _CStdLambdas3_;set _CStdLambdas_;if _n_=3;
+D1CZLam1=COL1;
+D1CZLam2=COL2; 
+D1CZLam3=COL3; 
+D1CZLam4=COL4; 
+D1CZLam5=COL5; 
+D1CZLam6=COL6; 
+D1CZLam7=COL7; 
+D1CZLam8=COL8; 
+D2CZLam1=COL9;
+D2CZLam2=COL10;  
+D2CZLam3=COL11;  
+D2CZLam4=COL12;  
+D2CZLam5=COL13;  
+D2CZLam6=COL14;  
+D2CZLam7=COL15;  
+D2CZLam8=COL16;  
+Data _CStdLambdas3_;set _CStdLambdas3_;drop _NAME_ _LABEL_ COL1-COL16;
+
+Data _CStdLambdas4_;set _CStdLambdas_;if _n_=4;
+ZSECD1L1=COL1;
+ZSECD1L2=COL2; 
+ZSECD1L3=COL3; 
+ZSECD1L4=COL4; 
+ZSECD1L5=COL5; 
+ZSECD1L6=COL6; 
+ZSECD1L7=COL7; 
+ZSECD1L8=COL8; 
+ZSECD2L1=COL9;
+ZSECD2L2=COL10;  
+ZSECD2L3=COL11;  
+ZSECD2L4=COL12;  
+ZSECD2L5=COL13;  
+ZSECD2L6=COL14;  
+ZSECD2L7=COL15;  
+ZSECD2L8=COL16;  
+
+Data _CStdLambdas4_;set _CStdLambdas4_;drop _NAME_ _LABEL_ COL1-COL16;
+
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the Factor Covariances, Correlations and standard errors of interest[CONSTRAINED]
+/*
+/*******************************************************************************************/
+
+Data _CFactCovs_;set _CParameters_; keep _ESTIM_ _STDERR_ _SDEST_ _SDSE_;
+Data _CFactCovs_;set _CFactCovs_;
+      If _N_=54 or _N_=110; 
+      *proc print;
+Data _CFactCovs_;set _CFactCovs_; Proc Transpose out=_CFactCovs_;*proc print;
+Data _CFactCovs1_;set _CFactCovs_;if _n_=1;
+D1_FCoC1=COL1;
+D2_FCoC1=COL2;
+Data _CFactCovs1_;set _CFactCovs1_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+Data _CFactCovs2_;set _CFactCovs_;if _n_=2;
+D1_CCSE1=COL1;
+D2_CCSE1=COL2;
+Data _CFactCovs2_;set _CFactCovs2_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+Data _CFactCovs3_;set _CFactCovs_;if _n_=3;
+D1_FCoC1=COL1;
+D2_FCoC1=COL2;
+Data _CFactCovs3_;set _CFactCovs3_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+Data _CFactCovs4_;set _CFactCovs_;if _n_=4;
+D1CorSC1=COL1;
+D2CorSC1=COL2;
+Data _CFactCovs4_;set _CFactCovs4_;drop _NAME_ _LABEL_ COL1-COL2;
+*proc print;
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the Factor Means, Variances and standard errors of interest
+/*
+/*******************************************************************************************/
+
+Data _CFactMean_;set _CParameters_; keep _ESTIM_ _STDERR_;
+Data _CFactMean_;set _CFactMean_;
+      If _N_=44 or _N_=45 or _N_=55 or _N_=56 or
+         _N_=100 or _N_=101; 
+         *proc print;
+Data _CFactMean_;set _CFactMean_; Proc Transpose out=_CFactMean_;*proc print;
+Data _CFactMean1_;set _CFactMean_;if _n_=1;
+D1CF1Var = COL1;
+D1CF2Var = COL2;
+D1CF1Mea = COL3;
+D1CF2Mea = COL4; 
+D2CF1Var = COL5;
+D2CF2Var = COL6;
+ 
+Data _CFactMean1_;set _CFactMean1_;drop _NAME_ _LABEL_ COL1-COL6;
+*proc print;
+
+Data _CFactMean2_;set _CFactMean_;if _n_=2;
+D1CF1VSE = COL1;
+D1CF2VSE = COL2; 
+D2CF1VSE = COL3;
+D2CF2VSE = COL4; 
+
+Data _CFactMean2_;set _CFactMean2_;drop _NAME_ _LABEL_ COL1-COL4;
+*proc print;
+
+/*******************************************************************************************/
+/* 
+/* This section isolates the FIT INDICES of interest
+/*
+/*******************************************************************************************/
+Data _CFitIndices_;set _CFitIndices_;*proc print;
+Data _CFitIndices_;set _CFitIndices_;
+If _N_=1 or _N_=2 or _N_=11 or _N_=12 or _N_=17 or 21<=_N_<=23 or
+        _N_=29;
+
+Data _CFitIndices_;set _CFitIndices_;Proc Transpose out=_CFitIndices_;
+Data _CFitIndices_;set _CFitIndices_;If _N_=2;
+Data _CFitIndices_;set _CFitIndices_;
+CSampsiz =COL1;
+CNumVar  =COL2; 
+CChiSqua =COL3; 
+CChiSDF  =COL4; 
+CSRMR    =COL5; 
+CRMSEA   =COL6; 
+CRMSEALL =COL7; 
+CRMSEAUL =COL8; 
+CCFI     =COL9; 
+
+Data _CFitIndices_;set _CFitIndices_;drop _NAME_ _LABEL_ COL1-COL9;
+
+/*******************************************************************************************/
+/* 
+/* This section MERGES all previous data sets into ONE dataset
+/*
+/*******************************************************************************************/
+
+Data _COMBINE_; merge _FitIndices_ _Taus1_ _Taus2_ _StdLambdas1_ _StdLambdas2_ _StdLambdas3_ _StdLambdas4_
+                      _FactMean1_ _FactMean2_ _FactCovs1_ _FactCovs2_ _FactCovs3_ _FactCovs4_  
+
+                      _CFitIndices_ _CTaus1_ _CTaus2_ _CStdLambdas1_ _CStdLambdas2_ _CStdLambdas3_ _CStdLambdas4_
+                      _CFactMean1_ _CFactMean2_ _CFactCovs1_ _CFactCovs2_ _CFactCovs3_ _CFactCovs4_ ; 
+					  *proc print;
+Data _COMBINE_; set _COMBINE_;
+                      n1=&n1;n2=&n2;Scenario=&Scenario;Configrl=0; format Scenario 5.4;
+			RMSEA_sq=RMSEA**2;
+            Gamma=NumVar/(NumVar+(2*ChiSDF*RMSEA_sq));
+			CRMSEA_sq=CRMSEA**2;
+            CGamma=CNumVar/(CNumVar+(2*CChiSDF*CRMSEA_sq));
+
+DeltaX2  = CChiSqua-ChiSquar;
+D_ChiSDF = CChiSDF-ChiSDF;
+
+D_CFI    = CCFI-CFI;
+D_SRMR   = CSRMR-SRMR ;
+D_RMSEA  = CRMSEA-RMSEA;
+D_Gamma  = CGamma-Gamma;
+
+/******************************************************************************************/
+/*  Scenario:
+/* 
+/* 1.000 = Complete Invariance
+/* 2.252 = Metric Noninvariance, 25% parameter noninvariance, .2 discrepancy
+/* 2.254 = Metric Noninvariance, 25% parameter noninvariance, .4 discrepancy
+/* 2.502 = Metric Noninvariance, 50% parameter noninvariance, .2 discrepancy
+/* 2.504 = Metric Noninvariance, 50% parameter noninvariance, .4 discrepancy
+/* 
+/******************************************************************************************/
+
+output; 
+
+proc print;
+
+proc append base=MeanStru.Data2_8_metric50(CNTLLEV=MEMBER) force;
+
+%end;
+%mend multivariat;
+
+/*
+%macro multivariat(REPS, n1, n2, 
+                   FCOV1,  laterr1, laterr2,  
+                   Lambd11,Lambd12,Lambd13,Lambd14,Lambd15,Lambd16,Lambd17,Lambd18,
+                   Error11,Error12,Error13,Error14,Error15,Error16,Error17,Error18,       
+
+                   FCOV2,  laterr3, laterr4,  
+                   Lambd21,Lambd22,Lambd23,Lambd24,Lambd25,Lambd26,Lambd27,Lambd28,
+                   Error21,Error22,Error23,Error24,Error25,Error26,Error27,Error28,       
+
+                   kappa1, kappa2, tau11, tau12, tau13, tau14, tau15, tau16, tau17, tau18,
+                   kappa3, kappa4, tau21, tau22, tau23, tau24, tau25, tau26, tau27, tau28);  */
+
+                        /*********** 0 NONINVARIANCE CONDITIONS 150/150***********/
+
+%multivariat(500,150, 150,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  1.000);
+
+                    /*********** METRIC NONINVARIANCE CONDITIONS 150/150***********/
+
+%multivariat(500,150, 150,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.6,0.6,0.6,0.6,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.2 diff factor loading */
+                             0.6,0.6,0.4,0.4,0.4,0.4,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.502);
+
+%multivariat(500,150, 150,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.4 diff factor loading */
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.8,0.8,0.8,0.8,0.4,0.4,
+                             0.6,0.6,0.2,0.2,0.2,0.2,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.504);
+
+                          /*********** 0 NONINVARIANCE CONDITIONS 100/200***********/
+
+%multivariat(500,100, 200,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  1.000);
+
+                    /*********** METRIC NONINVARIANCE CONDITIONS 100/200 ***********/
+
+%multivariat(500,100, 200,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.6,0.6,0.6,0.6,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.2 diff factor loading */
+                             0.6,0.6,0.4,0.4,0.4,0.4,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.502);
+
+%multivariat(500,100, 200,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.4 diff factor loading */
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.8,0.8,0.8,0.8,0.4,0.4,
+                             0.6,0.6,0.2,0.2,0.2,0.2,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.504);
+ 
+                          /*********** 0 NONINVARIANCE CONDITIONS 500/500***********/
+
+%multivariat(500,500, 500,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  1.000);
+
+                     /*********** METRIC NONINVARIANCE CONDITIONS 500/500***********/
+
+%multivariat(500,500, 500,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.6,0.6,0.6,0.6,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.2 diff factor loading */
+                             0.6,0.6,0.4,0.4,0.4,0.4,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.502);
+
+%multivariat(500,500, 500,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.4 diff factor loading */
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.8,0.8,0.8,0.8,0.4,0.4,
+                             0.6,0.6,0.2,0.2,0.2,0.2,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.504);
+
+                          /*********** 0 NONINVARIANCE CONDITIONS 334/666***********/
+
+%multivariat(500,334, 666,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  1.000);
+
+                    /*********** METRIC NONINVARIANCE CONDITIONS 334/666***********/
+
+%multivariat(500,334, 666,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.6,0.6,0.6,0.6,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.2 diff factor loading */
+                             0.6,0.6,0.4,0.4,0.4,0.4,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.502);
+
+%multivariat(500,334, 666,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.4 diff factor loading */
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.8,0.8,0.8,0.8,0.4,0.4,
+                             0.6,0.6,0.2,0.2,0.2,0.2,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.504);
+
+                    /*********** METRIC NONINVARIANCE CONDITIONS 1500/1500***********/
+
+*%multivariat(500,1500, 1500,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.6,0.6,0.6,0.6,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.2 diff factor loading */
+                             0.6,0.6,0.4,0.4,0.4,0.4,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.502);
+
+*%multivariat(500,1500, 1500,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.4 diff factor loading */
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.8,0.8,0.8,0.8,0.4,0.4,
+                             0.6,0.6,0.2,0.2,0.2,0.2,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.504);
+
+                    /*********** METRIC NONINVARIANCE CONDITIONS 1000/2000 ***********/
+
+*%multivariat(500,1000, 2000,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.6,0.6,0.6,0.6,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.2 diff factor loading */
+                             0.6,0.6,0.4,0.4,0.4,0.4,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.502);
+
+*%multivariat(500,1000, 2000,   0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,  /* 50% percent METRIC noninvariance, 0.4 diff factor loading */
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.8,0.8,0.8,0.8,0.4,0.4,
+                             0.6,0.6,0.2,0.2,0.2,0.2,0.6,0.6,
+
+                             1, 1,   10,10,10,10,10,10,10,10, 
+                             1, 1,   10,10,10,10,10,10,10,10,  2.504);
+run;quit;
+
+                        /* Parameters for Group 1 */                      /* Parameters for Group 2 */
+*proc means data=multivar.mean_structure_study;
+*proc summary data=multivar.mean_structure_study;
+
+
+/*******
+Metric Invariance (the lambdas are different across groups)
+Scalar Invariance (the Taus are different across groups)
+Configural Invariance (the factor structure is different across groups)
+
+/* CONTROL CONDITION: INTERCEPTS SET TO ZERO */
+/*%multivariat(2,1000, 1200, 0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4, 0.4,0.4,0.4,0.4,  
+                             0.6,0.6,0.6,0.6, 0.6,0.6,0.6,0.6,
+
+                             0.4,0.6,0.6,
+                             0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,
+                             0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,
+
+                             0, 0,    0, 0, 0, 0, 0, 0, 0, 0, 
+                             0, 0,    0, 0, 0, 0, 0, 0, 0, 0);
+*/
